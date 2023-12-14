@@ -3,17 +3,22 @@ package test;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Optional;
 
 public class HTMLReportFormatter extends ReportBase implements IReportFormatter {
     private Document htmlDoc;
+    private Element rowContainer;
+    private Element rowContent;
+    private Element content;
+    private Elements lineIdElements;
 
     public HTMLReportFormatter(String templatePath) throws IOException {
 
@@ -37,7 +42,6 @@ public class HTMLReportFormatter extends ReportBase implements IReportFormatter 
     public ArrayList<String> format(List<SheetCell> sheetCells) {
 
         var report = new ArrayList<String>();
-
         var tableMap = super.groupByLine(sheetCells);
 
         for (var key : tableMap.keySet()
@@ -47,7 +51,6 @@ public class HTMLReportFormatter extends ReportBase implements IReportFormatter 
 
         }
 
-        // return formattedContent;
         // Remove template nodes
         htmlDoc.getElementById("lineId").remove();
         htmlDoc.getElementById("column").remove();
@@ -55,27 +58,32 @@ public class HTMLReportFormatter extends ReportBase implements IReportFormatter 
         return report;
     }
 
-    private String formatRow(List<SheetCell> rows) {
+    private void removeTemplateNodes(ArrayList<Field> fields) {
 
-        // TODO: add line id into final report
-        // Get fields
-        var fields = SheetCell.class.getDeclaredFields();
-
-        // Compare if each field exists within the template
-        // and if it does, change the value.
-        // Do it only once
         for (var field : fields
              ) {
-            if(htmlDoc.text().contains(field.getName()))
-                System.out.println("The field " + field.getName() + " has found in the template.");
+            var node = htmlDoc.getElementsContainingText(field.getName());
+            node.remove();
         }
+    }
+
+    private void loadTemplateNodes(){
+
+        content = this.htmlDoc.getElementById("main");
+        rowContent = this.htmlDoc.getElementById("lineContent");
+        rowContainer = this.htmlDoc.getElementById("row-{{lineId}}").clone();
+
+        var lineId = content.getElementById("lineId");
+        if(lineId != null)
+            lineIdElements = lineId.children().clone();
+    }
+
+    private String formatRow(List<SheetCell> rows) {
+
+        var fields = getTemplateFields();
 
         // Get document nodes
-        // Doc html = ...
-        Element content = this.htmlDoc.getElementById("table");
-        Element rowContent = this.htmlDoc.getElementById("lineContent");
-        Element rowContainer = this.htmlDoc.getElementById("row-{{lineId}}").clone();
-        Elements es = content.getElementById("lineId").children().clone();
+        loadTemplateNodes();
 
         // Get value of the fields of each row
         boolean indexPrinted = false;
@@ -96,50 +104,20 @@ public class HTMLReportFormatter extends ReportBase implements IReportFormatter 
                     if (indexPrinted && field.getName() == "lineId")
                         continue;
 
-                    System.out.println("The value of this field is: " + value.toString());
-                    // Replace value of template
-
-
                     for (var element : elements
                          ) {
 
                         if(element.textNodes().stream().count() > 0){
+                            var node = getNodeByText(element, field.getName());
 
-                            element.textNodes().stream()
-                                    .filter(textNode -> textNode.text().contains("{{" + field.getName() + "}}"))
-                                    .findFirst()
-                                    .ifPresent(textNode -> {
-                                        String updatedText = textNode.text().replace("{{" + field.getName() + "}}", value.toString());
-                                        textNode.text(updatedText);
-                                        element.text(textNode.text());
-                                    });
+                            if(node.isPresent())
+                                updateNodeText(node.get(),field.getName(),value.toString());
                         }
                     }
 
                     // TODO: Distinct value. Change the logic
                     if(field.getName() == "lineId"){
-
-                        var result = rowContainer.id().replace("{{" + field.getName() + "}}",  value.toString());
-                        rowContainer.id(result);
-                        result = rowContainer.text().replace("{{" + field.getName() + "}}",  value.toString());
-                        rowContainer.text(result);
-
-                        var node = es.textNodes().stream()
-                                .filter(textNode -> textNode.text().contains("{{" + field.getName() + "}}"))
-                                .findFirst();
-//                                .ifPresent(textNode -> {
-//                                    String updatedText = textNode.text().replace("{{" + field.getName() + "}}", value.toString());
-//                                    textNode.text(updatedText);
-//                                    //e.text(textNode.text());
-//                                });
-                        if(node.get() != null){
-                            String updatedText = node.get().text().replace("{{" + field.getName() + "}}", value.toString());
-                            node.get().text(updatedText);
-                            rowContainer.appendChildren(es);
-                            //e.text(textNode.text());
-                        }
-
-
+                        replaceNodeValue(lineIdElements, field, value);
                         indexPrinted = true;
                     }
 
@@ -152,6 +130,88 @@ public class HTMLReportFormatter extends ReportBase implements IReportFormatter 
             rowContent.appendChild(rowContainer);
         }
 
+        //removeTemplateNodes(fields);
+
         return  rowContainer.html();
+    }
+
+    private void replaceNodeValue(Elements elements, Field field, Object value) {
+
+        // Get all elements with id equal to class sheet cell field
+        var nodes = htmlDoc.getElementsByAttributeValueContaining("id", field.getName());
+
+        if(nodes != null){
+            nodes.forEach((n) -> updateNodeId(n,field.getName(), value.toString()));
+        }
+
+        // ***
+
+//        var t = htmlDoc.getElementsContainingText(field.getName());
+//        var x = getNodeByText(t, field.getName());
+//        var y= updateNodeText(x.get(), field.getName(), value.toString());
+        //rowContainer.appendChildren(elements);
+        // ***
+
+        var node = getNodeByText(elements, field.getName());
+        updateNodeText(node.get(),"{{" + field.getName() + "}}", value.toString());
+
+        node = getNodeByText(elements, field.getName());
+
+        if(node != null){
+            updateNodeText(node.get(), field.getName(), value.toString());
+            rowContainer.appendChildren(elements);
+        }
+    }
+
+    /**
+     *
+     * */
+    private void updateNodeId(Element element, String field , String value){
+        var result = element.id().replace("{{" + field + "}}",value);
+        rowContainer.id(result);
+    }
+
+    /**
+     * Get a node from an element by its text.
+     * */
+    private Optional<TextNode> getNodeByText(Elements elements, String text){
+
+        return elements.textNodes().stream()
+                .filter(textNode -> textNode.text().contains("{{" + text + "}}"))
+                .findFirst();
+    }
+
+    /**
+     * Get a node from an element by its text.
+     * */
+    private Optional<TextNode> getNodeByText(Element element, String text) {
+        return element.textNodes().stream()
+                .filter(textNode -> textNode.text().contains("{{" + text + "}}"))
+                .findFirst();
+    }
+
+    /**
+     *  Update a node replacing the current text for a new one.
+     * */
+    private TextNode updateNodeText(TextNode node, String oldText, String newtext){
+
+        String updatedText = node.text().replace("{{" + oldText + "}}", newtext);
+        node.text(updatedText);
+        return node;
+    }
+
+    /**
+     * Verify each field within the template.
+     * */
+    private ArrayList<Field> getTemplateFields() {
+        var fields = SheetCell.class.getDeclaredFields();
+        ArrayList<Field> fieldsFound = new ArrayList<>();
+
+        for (var field : fields
+             ) {
+            if(htmlDoc.text().contains(field.getName()))
+                fieldsFound.add(field);
+        }
+        return fieldsFound;
     }
 }

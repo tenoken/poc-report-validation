@@ -5,17 +5,21 @@
 
 <h1>Report Result</h1>
 
-<div id="table">
+<div id="main">
 
+    <!--Display the line id-->
     <div id="lineId">
         <br>
         <b>Line Id: </b>
         <span>{{lineId}}</span>
     </div>
 
+    <!--Contains the result of formation-->
     <div id="lineContent"></div>
+    <!--All the content of each line will be appended to this element-->
     <div id="row-{{lineId}}"></div>
 
+    <!--Template of each column-->
     <div id="column">
         <br>
         <b>{{columnName}}: </b>
