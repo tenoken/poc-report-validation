@@ -8,16 +8,22 @@ import org.jsoup.select.Elements;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class HTMLReportFormatter extends ReportBase implements IReportFormatter {
     private Document htmlDoc;
 
-    public HTMLReportFormatter(String templatePath) {
+    public HTMLReportFormatter(String templatePath) throws IOException {
+
+        if(templatePath == null)
+            throw new IllegalArgumentException("The path must have a valid value.");
+
         try {
             this.htmlDoc = loadHTMLTemplate(templatePath);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new IOException("The template file could not be found.");
         }
     }
 
@@ -46,49 +52,106 @@ public class HTMLReportFormatter extends ReportBase implements IReportFormatter 
         htmlDoc.getElementById("lineId").remove();
         htmlDoc.getElementById("column").remove();
         htmlDoc.getElementById("row-{{lineId}}").remove();
-        return null;
+        return report;
     }
 
     private String formatRow(List<SheetCell> rows) {
+
+        // TODO: add line id into final report
+        // Get fields
+        var fields = SheetCell.class.getDeclaredFields();
+
+        // Compare if each field exists within the template
+        // and if it does, change the value.
+        // Do it only once
+        for (var field : fields
+             ) {
+            if(htmlDoc.text().contains(field.getName()))
+                System.out.println("The field " + field.getName() + " has found in the template.");
+        }
+
+        // Get document nodes
+        // Doc html = ...
         Element content = this.htmlDoc.getElementById("table");
         Element rowContent = this.htmlDoc.getElementById("lineContent");
         Element rowContainer = this.htmlDoc.getElementById("row-{{lineId}}").clone();
+        Elements es = content.getElementById("lineId").children().clone();
 
-
-        Elements e = content.getElementById("lineId").children().clone();
-
-        for (Element el : e){
-            if(el.text().contains("{{lineId}}")){
-                var result = el.text().replace("{{lineId}}", String.valueOf(rows.get(0).getLineId()));
-                var result2 = rowContainer.id().replace("{{lineId}}", String.valueOf(rows.get(0).getLineId()));
-                el.text(result);
-                rowContainer.id(result2);
-            }
-            rowContainer.appendChild(el);
-        }
-
-        for (var row: rows
+        // Get value of the fields of each row
+        boolean indexPrinted = false;
+        for (var sheetCell : rows
              ) {
+           var x = sheetCell.getClass().getDeclaredFields();
+            Elements elements = content.getElementById("column").children().clone();;
 
-            Elements elements = content.getElementById("column").children().clone();
-            for (Element element : elements) {
+            for (var field : fields
+                 ) {
+                field.setAccessible(true);
 
-                if(element.text().contains("{{columnName}}")){
-                    var result = element.textNodes().get(0).text().replace("{{columnName}}",row.getColumnName());
-                    element.text(result);
+                try {
+
+                    Object value = field.get(sheetCell);
+
+                    // TODO: Distinct value. Change the logic
+                    if (indexPrinted && field.getName() == "lineId")
+                        continue;
+
+                    System.out.println("The value of this field is: " + value.toString());
+                    // Replace value of template
+
+
+                    for (var element : elements
+                         ) {
+
+                        if(element.textNodes().stream().count() > 0){
+
+                            element.textNodes().stream()
+                                    .filter(textNode -> textNode.text().contains("{{" + field.getName() + "}}"))
+                                    .findFirst()
+                                    .ifPresent(textNode -> {
+                                        String updatedText = textNode.text().replace("{{" + field.getName() + "}}", value.toString());
+                                        textNode.text(updatedText);
+                                        element.text(textNode.text());
+                                    });
+                        }
+                    }
+
+                    // TODO: Distinct value. Change the logic
+                    if(field.getName() == "lineId"){
+
+                        var result = rowContainer.id().replace("{{" + field.getName() + "}}",  value.toString());
+                        rowContainer.id(result);
+                        result = rowContainer.text().replace("{{" + field.getName() + "}}",  value.toString());
+                        rowContainer.text(result);
+
+                        var node = es.textNodes().stream()
+                                .filter(textNode -> textNode.text().contains("{{" + field.getName() + "}}"))
+                                .findFirst();
+//                                .ifPresent(textNode -> {
+//                                    String updatedText = textNode.text().replace("{{" + field.getName() + "}}", value.toString());
+//                                    textNode.text(updatedText);
+//                                    //e.text(textNode.text());
+//                                });
+                        if(node.get() != null){
+                            String updatedText = node.get().text().replace("{{" + field.getName() + "}}", value.toString());
+                            node.get().text(updatedText);
+                            rowContainer.appendChildren(es);
+                            //e.text(textNode.text());
+                        }
+
+
+                        indexPrinted = true;
+                    }
+
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException(e);
                 }
-
-                if(element.text().contains("{{value}}")){
-                    var result = element.text().replace("{{value}}", row.getValue());
-                    element.text(result);
-                }
-
             }
 
             rowContainer.appendChildren(elements.clone());
             rowContent.appendChild(rowContainer);
         }
 
-        return  "";
+        return  rowContainer.html();
     }
 }

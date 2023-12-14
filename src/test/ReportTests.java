@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import java.io.IOException;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -207,7 +208,6 @@ public class ReportTests {
 
         // Assert
         assertDoesNotThrow(() -> new HTMLReportFormatter(path));
-        //assertNotNull(() -> new HTMLReportFormatter(path).get);
     }
 
     @Test
@@ -217,21 +217,38 @@ public class ReportTests {
         // Act
 
         // Assert
+        assertThrowsExactly(IOException.class, () -> new HTMLReportFormatter(""),
+                "The template file could not be found.");
+        assertThrowsExactly(IllegalArgumentException.class, () -> new HTMLReportFormatter(null),
+                "The path must have a valid value.");
     }
 
-    @Test
-    void Should_WhenFormatHTMLReport(){
+    @ParameterizedTest
+    @CsvSource({
+            "10, /src/classic_horror_films_2.csv",
+            "9, /src/shopping.csv",
+    })
+    //@Test
+    void ShouldReturnFormattedRows_WhenReportIsHTMLFormatted(int rowsCount, String path){
         // Arrange
-        String csvFilePath = currentWorkingDirectory + "/src/shopping.csv";
-        var path = currentWorkingDirectory + "/src/standard_report.html";
-        //aSet = new ReportValidation().loadDataSet(defaultCsvFilePath);
-        aSet = new ReportValidation().loadDataSet(csvFilePath);
-
+        var reportPath = currentWorkingDirectory + path;
+        var templatePath = currentWorkingDirectory + "/src/standard_report.html";
+        aSet = new ReportValidation().loadDataSet(reportPath);
 
         // Act
-        var sut = new HTMLReportFormatter(path).format(aSet);
+        ArrayList<String> sut;
+        try {
+            sut = new HTMLReportFormatter(templatePath).format(aSet);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         // Assert
-        fail();
+        assertEquals(rowsCount, sut.stream().count());
+
+        for (var row : sut.stream().toList()
+             ) {
+            assertTrue(row.contains("<"));
+        }
     }
 }
