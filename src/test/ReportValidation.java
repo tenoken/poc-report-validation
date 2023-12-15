@@ -1,10 +1,14 @@
 package test;
 
+import com.opencsv.CSVParser;
+import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
 import com.opencsv.exceptions.CsvValidationException;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -20,7 +24,8 @@ public class ReportValidation {
 
         List<SheetCell> dataSet = new ArrayList<SheetCell>();
 
-        try (CSVReader reader = new CSVReader(new FileReader(path))) {
+        try (CSVReader reader = getCSVReader(new FileReader(path),';')){ //{new CSVReader(new FileReader(path))
+
             String[] headers = reader.readNext(); // Read and discard headers
             int index = 0;
             if (headers != null) {
@@ -104,4 +109,12 @@ public class ReportValidation {
                                 Collectors.toList()));
         return map;
     }
+
+    private static CSVReader getCSVReader(Reader reader, char separator) throws IOException {
+        return new CSVReaderBuilder(reader)
+                        .withCSVParser(new CSVParserBuilder().withSeparator(separator).build())
+                        .build();
+    }
+
+
 }

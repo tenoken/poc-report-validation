@@ -1,10 +1,10 @@
-Installments Id,Installment value,Final value,Product Name,Shop Name
-1,50.00,150.00,Wireless Mouse,PC Gear Emporium
-2,50.00,150.00,Wireless Mouse,PC Gear Emporium
-3,50.00,150.00,Wireless Mouse,PC Gear Emporium
-4,30.00,90.00,Mechanical Keyboard,Tech Haven
-5,30.00,90.00,Mechanical Keyboard,Tech Haven
-6,30.00,90.00,Mechanical Keyboard,Tech Haven
-7,40.00,120.00,Gaming Headset,ElectroByte Solutions
-8,40.00,120.00,Gaming Headset,ElectroByte Solutions
-9,40.00,120.00,Gaming Headset,ElectroByte Solutions
+Installments Id;Installment value;Final value;Product Name;Shop Name
+1;50.00;150.00;Wireless Mouse;PC Gear Emporium
+2;50.00;150.00;Wireless Mouse;PC Gear Emporium
+3;50.00;150.00;Wireless Mouse;PC Gear Emporium
+4;30.00;90.00;Mechanical Keyboard;Tech Haven
+5;30.00;90.00;Mechanical Keyboard;Tech Haven
+6;30.00;90.00;Mechanical Keyboard;Tech Haven
+7;40.00;120.00;Gaming Headset;ElectroByte Solutions
+8;40.00;120.00;Gaming Headset;ElectroByte Solutions
+9;40.00;120.00;Gaming Headset;ElectroByte Solutions

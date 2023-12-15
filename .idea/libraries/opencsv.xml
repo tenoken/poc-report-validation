@@ -1,6 +1,6 @@
 <component name="libraryTable">
   <library name="opencsv" type="repository">
-    <properties maven-id="com.opencsv:opencsv:5.9" />
+    <properties maven-id="com.opencsv:opencsv:LATEST" />
     <CLASSES>
       <root url="jar://$MAVEN_REPOSITORY$/com/opencsv/opencsv/5.9/opencsv-5.9.jar!/" />
       <root url="jar://$MAVEN_REPOSITORY$/org/apache/commons/commons-lang3/3.13.0/commons-lang3-3.13.0.jar!/" />
