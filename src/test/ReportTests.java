@@ -251,4 +251,32 @@ public class ReportTests {
             assertTrue(row.contains("<"));
         }
     }
+
+    @ParameterizedTest
+    @CsvSource({
+            "10, /src/classic_horror_films_2.csv",
+            "9, /src/shopping.csv",
+    })
+    public void Test(int rowsCount, String path){
+        // Arrange
+        var reportPath = currentWorkingDirectory + path;
+        var templatePath = currentWorkingDirectory + "/src/standard_report_2.html";
+        aSet = new ReportValidation().loadDataSet(reportPath);
+
+        // Act
+        ArrayList<String> sut;
+        try {
+            sut = new Template(templatePath).format(aSet);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        // Assert
+        assertEquals(rowsCount, sut.stream().count());
+
+        for (var row : sut.stream().toList()
+        ) {
+            assertTrue(row.contains("<"));
+        }
+    }
 }
